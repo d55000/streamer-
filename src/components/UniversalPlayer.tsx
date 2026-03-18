@@ -61,15 +61,21 @@ function formatTime(seconds: number): string {
 function detectStreamType(
   url: string
 ): "hls" | "dash" | "native" | "unknown" {
-  const lower = url.toLowerCase();
+  // Strip query string and fragment before checking extensions
+  const lower = url.toLowerCase().split(/[?#]/)[0];
   if (lower.includes(".m3u8")) return "hls";
   if (lower.includes(".mpd")) return "dash";
   if (
     lower.includes(".mp4") ||
     lower.includes(".webm") ||
-    lower.includes(".ogg")
+    lower.includes(".ogg") ||
+    lower.includes(".mov") ||
+    lower.includes(".mkv") ||
+    lower.includes(".avi")
   )
     return "native";
+  // If the URL ends with a known container-like pattern, treat as native
+  if (/\.(ts|m4v|m4a|mp3|aac|flac|wav)$/.test(lower)) return "native";
   return "unknown";
 }
 
@@ -103,6 +109,10 @@ export default function UniversalPlayer({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [buffered, setBuffered] = useState(0);
 
+  /* Error / proxy fallback */
+  const [error, setError] = useState("");
+  const [usingProxy, setUsingProxy] = useState(false);
+
   /* Settings panel */
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsPanel, setSettingsPanel] = useState<SettingsPanel>("main");
@@ -135,9 +145,31 @@ export default function UniversalPlayer({
 
   const activeSrc = objectUrl || src || "";
 
+  /* Reset error / proxy state when the user provides a new source */
+  useEffect(() => {
+    setError("");
+    setUsingProxy(false);
+    setAudioTracks([]);
+  }, [src, objectUrl]);
+
+  /** Wrap a remote URL through the local proxy to bypass CORS / COEP */
+  const proxyUrl = useCallback(
+    (url: string) => `/api/proxy?url=${encodeURIComponent(url)}`,
+    []
+  );
+
+  /** The URL actually fed to the player (direct or proxied) */
+  const resolvedSrc = useMemo(
+    () => (usingProxy && src ? proxyUrl(src) : activeSrc),
+    [usingProxy, src, proxyUrl, activeSrc]
+  );
+
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !activeSrc) return;
+    if (!video || !resolvedSrc) return;
+
+    // Reset error state when source changes
+    setError("");
 
     // Cleanup previous instances
     if (hlsRef.current) {
@@ -156,13 +188,13 @@ export default function UniversalPlayer({
       return;
     }
 
-    const streamType = detectStreamType(activeSrc);
+    const streamType = detectStreamType(resolvedSrc);
 
     if (streamType === "hls") {
       if (Hls.isSupported()) {
         const hls = new Hls();
         hlsRef.current = hls;
-        hls.loadSource(activeSrc);
+        hls.loadSource(resolvedSrc);
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -176,16 +208,26 @@ export default function UniversalPlayer({
           setAudioTracks(tracks);
           setActiveAudioTrack(hls.audioTrack);
         });
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            if (!usingProxy && src) {
+              setUsingProxy(true); // triggers re-render; cleanup destroys old hls
+            } else {
+              setError("Failed to load HLS stream");
+            }
+          }
+        });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
         // Safari native HLS
-        video.src = activeSrc;
+        video.src = resolvedSrc;
         video.load();
       }
     } else if (streamType === "dash") {
       import("dashjs").then(({ MediaPlayer: DashMediaPlayer }) => {
         const player = DashMediaPlayer().create();
         dashRef.current = player;
-        player.initialize(video, activeSrc, false);
+        player.initialize(video, resolvedSrc, false);
 
         player.on("streamInitialized", () => {
           const tracks = player.getTracksFor("audio");
@@ -198,10 +240,18 @@ export default function UniversalPlayer({
           }));
           setAudioTracks(mapped);
         });
+
+        player.on("error", () => {
+          if (!usingProxy && src) {
+            setUsingProxy(true); // triggers re-render; cleanup resets old dash player
+          } else {
+            setError("Failed to load DASH stream");
+          }
+        });
       });
     } else {
       // native mp4/webm or unknown
-      video.src = activeSrc;
+      video.src = resolvedSrc;
       video.load();
     }
 
@@ -215,7 +265,7 @@ export default function UniversalPlayer({
         dashRef.current = null;
       }
     };
-  }, [activeSrc, objectUrl]);
+  }, [resolvedSrc, objectUrl, usingProxy, src]);
 
   /* Read native audio tracks (for local files) */
   useEffect(() => {
@@ -256,11 +306,22 @@ export default function UniversalPlayer({
 
     const onTimeUpdate = () => setCurrentTime(video.currentTime);
     const onDurationChange = () => setDuration(video.duration);
-    const onPlay = () => setPlaying(true);
+    const onPlay = () => {
+      setPlaying(true);
+      setError("");
+    };
     const onPause = () => setPlaying(false);
     const onProgress = () => {
       if (video.buffered.length > 0) {
         setBuffered(video.buffered.end(video.buffered.length - 1));
+      }
+    };
+    const onError = () => {
+      // If direct load failed and we haven't tried the proxy yet, fall back
+      if (!usingProxy && src && !objectUrl) {
+        setUsingProxy(true);
+      } else {
+        setError("Unable to load this media. The format may be unsupported or the link may be inaccessible.");
       }
     };
 
@@ -269,6 +330,7 @@ export default function UniversalPlayer({
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
     video.addEventListener("progress", onProgress);
+    video.addEventListener("error", onError);
 
     return () => {
       video.removeEventListener("timeupdate", onTimeUpdate);
@@ -276,8 +338,9 @@ export default function UniversalPlayer({
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
       video.removeEventListener("progress", onProgress);
+      video.removeEventListener("error", onError);
     };
-  }, []);
+  }, [usingProxy, src, objectUrl]);
 
   /* ---------------------------------------------------------------- */
   /*  Controls auto-hide                                               */
@@ -736,6 +799,21 @@ export default function UniversalPlayer({
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={toggleFullscreen}
       />
+
+      {/* Error overlay */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/80">
+          <div className="text-center space-y-3 px-6 max-w-md">
+            <div className="w-14 h-14 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto">
+              <X className="w-7 h-7 text-red-400" />
+            </div>
+            <p className="text-white/80 text-sm font-medium">{error}</p>
+            <p className="text-white/40 text-xs">
+              Check that the URL is correct and the server is reachable
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hidden subtitle file input */}
       <input
