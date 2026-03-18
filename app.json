@@ -1,0 +1,24 @@
+{
+  "name": "streampro",
+  "description": "Universal web media player — MP4, WebM, HLS, DASH, MKV",
+  "keywords": ["nextjs", "media-player", "hls", "dash", "streaming"],
+  "repository": "https://github.com/d55000/streamer-",
+  "stack": "heroku-24",
+  "buildpacks": [
+    { "url": "heroku/nodejs" }
+  ],
+  "scripts": {
+    "postdeploy": "npm run build"
+  },
+  "env": {
+    "NODE_ENV": {
+      "value": "production"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  }
+}

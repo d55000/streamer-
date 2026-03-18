@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Enable standalone output for Docker-based deployments (Railway, Koyeb)
+  output: "standalone",
   // Allow cross-origin headers required by SharedArrayBuffer / FFmpeg WASM
   async headers() {
     return [

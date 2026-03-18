@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StreamPro — Universal Media Player
+
+A high-fidelity universal web media player built with **Next.js**, **Tailwind CSS**, **hls.js**, and **dash.js**. Supports MP4, WebM, HLS (`.m3u8`), DASH (`.mpd`), and MKV playback with custom controls, audio track switching, and subtitle management.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+StreamPro includes ready-to-use configuration files for multiple cloud platforms.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Heroku
 
-## Deploy on Vercel
+Uses the Node.js buildpack with a `Procfile`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+heroku create streampro
+git push heroku main
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+One-click deploy is supported via `app.json` — add a **Deploy to Heroku** button in your fork if desired.
+
+### Railway
+
+Uses [Nixpacks](https://nixpacks.com) auto-detection with `railway.json`.
+
+1. Connect your GitHub repository at [railway.app](https://railway.app).
+2. Railway auto-detects the config and deploys.
+
+Or via the CLI:
+
+```bash
+npm i -g @railway/cli
+railway login
+railway init
+railway up
+```
+
+### Render
+
+Uses the `render.yaml` blueprint for automatic service creation.
+
+1. Go to [render.com](https://render.com) → **New** → **Blueprint**.
+2. Connect this repository — Render reads `render.yaml` automatically.
+
+Or create a **Web Service** manually with:
+- **Build command:** `npm install && npm run build`
+- **Start command:** `npm run start -- -p $PORT`
+
+### Koyeb
+
+Uses a Docker-based deployment with `koyeb.yaml` and the included `Dockerfile`.
+
+1. Go to [koyeb.com](https://app.koyeb.com) → **Create App** → **Docker**.
+2. Point to this repository — Koyeb builds the `Dockerfile` automatically.
+
+Or via the CLI:
+
+```bash
+koyeb app create streampro --docker "github.com/d55000/streamer-" --branch main --port 3000
+```
+
+### Docker (any platform)
+
+```bash
+docker build -t streampro .
+docker run -p 3000:3000 streampro
+```
+
+---
+
+## Tech Stack
+
+| Layer        | Technology                          |
+| ------------ | ----------------------------------- |
+| Framework    | Next.js 16 (App Router, Turbopack)  |
+| Styling      | Tailwind CSS v4                     |
+| HLS          | hls.js                              |
+| DASH         | dash.js                             |
+| Icons        | Lucide React                        |
+| FFmpeg (MKV) | @ffmpeg/ffmpeg (WASM, architecture) |
