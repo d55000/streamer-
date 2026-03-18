@@ -37,10 +37,10 @@ One-click deploy is supported via `app.json` — add a **Deploy to Heroku** butt
 
 ### Railway
 
-Uses [Nixpacks](https://nixpacks.com) auto-detection with `railway.json`.
+Uses the included `Dockerfile` for deployment.
 
 1. Connect your GitHub repository at [railway.app](https://railway.app).
-2. Railway auto-detects the config and deploys.
+2. Railway auto-detects the `Dockerfile` and deploys.
 
 Or via the CLI:
 
