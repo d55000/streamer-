@@ -1,0 +1,34 @@
+Act as an Elite Streaming Architect and Senior Frontend Developer. Your task is to build a high-fidelity, professional universal web media player using React (Next.js), Tailwind CSS, and a robust media handling library (like Video.js, Shaka Player, or a WebAssembly/FFmpeg wrapper).
+
+# 1. VISUAL THEME & UI/UX (Pro Design)
+- **Primary Background:** Midnight Black (`#0A0A0B` and `#16161E` for surface cards).
+- **Accents:** Electric Violet (`#8B5CF6`) and Neon Purple (`#A855F7`) for buttons, active states, and soft glow effects (`shadow-[0_0_15px_rgba(139,92,246,0.3)]`).
+- **Typography:** Modern sans-serif (Inter or Roboto), high contrast white/light gray text.
+- **Style:** Clean glassmorphism styling for control overlays (backdrop-blur, semi-transparent dark backgrounds), smooth transitions, and zero clutter. 
+
+# 2. CORE COMPONENT: THE UNIVERSAL PLAYER
+I need a custom-styled video player component that overrides default browser controls. It must include a sleek control bar that fades out when inactive. 
+
+The player must handle:
+- **Standard Links:** Direct `.mp4`, `.webm`.
+- **Streaming Links:** HLS (`.m3u8`) and DASH (`.mpd`).
+- **Complex/Local Formats:** Provide the architectural setup or WebAssembly (`@ffmpeg/ffmpeg`) integration logic to handle `.mkv` files natively in the browser without server transcoding.
+
+# 3. ADVANCED CONTROLS (The "Settings" Gear)
+Create a custom settings menu overlay inside the video player with the following interactive sub-menus:
+- **Audio Track Switcher:** Logic to read available audio streams (multiplexed in MKV/HLS) and allow the user to toggle between multiple languages seamlessly.
+- **Subtitle Manager:** - Ability to detect embedded subtitles.
+  - An "Upload Subtitle" button allowing users to load external `.srt`, `.vtt`, or `.ass` files.
+  - Subtitle customization options (Text size, color, background opacity).
+
+# 4. PAGE LAYOUT
+- **Header:** Sleek navbar with a minimalist logo and "Pro" badge.
+- **Input Section:** A beautifully styled, glowing URL input bar where users can paste streaming links, alongside a "Drop File" zone for local MKV/MP4 files.
+- **Main Stage:** The Video Player container, dominating the center of the screen with a cinematic violet backglow.
+
+# 5. YOUR OUTPUT
+Please provide:
+1. The exact terminal commands to install necessary dependencies (e.g., video.js, hls.js, tailwind-merge, lucide-react for icons).
+2. The complete React code for the `UniversalPlayer.jsx` component. Include the custom UI overlays for Audio and Subtitles.
+3. The layout component integrating the URL input and the player.
+Do not use placeholder UI; write production-ready, highly styled Tailwind markup.
