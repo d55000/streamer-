@@ -66,6 +66,23 @@ interface HlsSubTrack {
 type SettingsPanel = "main" | "audio" | "subtitles" | "subStyle" | "chapters";
 
 /* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
+
+/** Maximum volume multiplier (300 %). */
+const MAX_VOLUME = 3;
+/** Volume change per arrow-key press. */
+const VOLUME_STEP = 0.1;
+/** Tap zone boundary — taps in the left 35 % seek backward. */
+const LEFT_TAP_ZONE = 0.35;
+/** Tap zone boundary — taps in the right 35 % seek forward. */
+const RIGHT_TAP_ZONE = 0.65;
+/** When jumping to "previous chapter", ignore the first N seconds. */
+const CHAPTER_REWIND_THRESHOLD = 2;
+/** Tolerance (seconds) for deciding if a chapter end needs a duration fix. */
+const CHAPTER_END_TOLERANCE = 60;
+
+/* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -281,7 +298,7 @@ export default function UniversalPlayer({
 
     (async () => {
       try {
-        setProcessingStatus("Analyzing media\u2026");
+        setProcessingStatus("Analyzing media...");
         setIsProcessing(true);
 
         const { probeFile } = await import("@/lib/ffmpegHelper");
@@ -478,7 +495,7 @@ export default function UniversalPlayer({
       setChapters((prev) => {
         if (prev.length === 0) return prev;
         const last = prev[prev.length - 1];
-        if (last.end === 0 || last.end > video.duration + 60) {
+        if (last.end === 0 || last.end > video.duration + CHAPTER_END_TOLERANCE) {
           const updated = [...prev];
           updated[updated.length - 1] = { ...last, end: video.duration };
           return updated;
@@ -716,8 +733,8 @@ export default function UniversalPlayer({
     } else if (tapCountRef.current >= 2) {
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
       tapCountRef.current = 0;
-      if (relativeX < 0.35) { seekRelative(-10); showSeekFeedback("backward"); }
-      else if (relativeX > 0.65) { seekRelative(10); showSeekFeedback("forward"); }
+      if (relativeX < LEFT_TAP_ZONE) { seekRelative(-10); showSeekFeedback("backward"); }
+      else if (relativeX > RIGHT_TAP_ZONE) { seekRelative(10); showSeekFeedback("forward"); }
       else toggleFullscreen();
     }
   }, [settingsOpen, togglePlay, seekRelative, showSeekFeedback, toggleFullscreen]);
@@ -736,8 +753,8 @@ export default function UniversalPlayer({
         case " ": case "k": e.preventDefault(); togglePlay(); break;
         case "ArrowLeft": e.preventDefault(); seekRelative(-10); showSeekFeedback("backward"); break;
         case "ArrowRight": e.preventDefault(); seekRelative(10); showSeekFeedback("forward"); break;
-        case "ArrowUp": e.preventDefault(); setVolume((v) => Math.min(3, +(v + 0.1).toFixed(2))); break;
-        case "ArrowDown": e.preventDefault(); setVolume((v) => Math.max(0, +(v - 0.1).toFixed(2))); break;
+        case "ArrowUp": e.preventDefault(); setVolume((v) => Math.min(MAX_VOLUME, +(v + VOLUME_STEP).toFixed(2))); break;
+        case "ArrowDown": e.preventDefault(); setVolume((v) => Math.max(0, +(v - VOLUME_STEP).toFixed(2))); break;
         case "f": toggleFullscreen(); break;
         case "m": toggleMute(); break;
         case "c": setSubtitlesEnabled((p) => !p); break;
@@ -923,7 +940,7 @@ export default function UniversalPlayer({
         <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/80">
           <div className="text-center space-y-4 px-6 max-w-md">
             <Loader2 className="w-12 h-12 mx-auto text-[#8B5CF6] animate-spin" />
-            <p className="text-white/80 text-sm font-medium">{processingStatus || "Processing\u2026"}</p>
+            <p className="text-white/80 text-sm font-medium">{processingStatus || "Processing..."}</p>
             {processingProgress > 0 && processingProgress < 1 && (
               <div className="w-48 mx-auto h-1.5 bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full bg-[#8B5CF6] rounded-full transition-all" style={{ width: `${Math.round(processingProgress * 100)}%` }} />
@@ -1000,7 +1017,7 @@ export default function UniversalPlayer({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {chapters.length > 0 && (
-              <button onClick={() => { const prev = [...chapters].reverse().find((c) => c.start < currentTime - 2); if (prev) jumpToChapter(prev); else if (chapters[0]) jumpToChapter(chapters[0]); }} className="p-1 rounded-lg text-white hover:bg-white/10 transition-colors" aria-label="Previous chapter"><SkipBack className="w-4 h-4" /></button>
+              <button onClick={() => { const prev = [...chapters].reverse().find((c) => c.start < currentTime - CHAPTER_REWIND_THRESHOLD); if (prev) jumpToChapter(prev); else if (chapters[0]) jumpToChapter(chapters[0]); }} className="p-1 rounded-lg text-white hover:bg-white/10 transition-colors" aria-label="Previous chapter"><SkipBack className="w-4 h-4" /></button>
             )}
             <button onClick={togglePlay} className="p-1.5 rounded-lg text-white hover:bg-white/10 transition-colors" aria-label={playing ? "Pause" : "Play"}>
               {playing ? <Pause className="w-5 h-5" fill="white" /> : <Play className="w-5 h-5 ml-0.5" fill="white" />}
@@ -1015,7 +1032,7 @@ export default function UniversalPlayer({
                 {muted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </button>
               <div className="w-0 overflow-hidden group-hover/vol:w-32 transition-all duration-200 flex items-center gap-1.5">
-                <input type="range" min={0} max={3} step={0.05} value={muted ? 0 : volume} onChange={changeVolume} className="w-20" />
+                <input type="range" min={0} max={MAX_VOLUME} step={0.05} value={muted ? 0 : volume} onChange={changeVolume} className="w-20" />
                 <span className={`text-[10px] font-mono tabular-nums whitespace-nowrap ${volume > 1 ? "text-amber-400" : "text-white/50"}`}>{Math.round(volume * 100)}%</span>
               </div>
             </div>

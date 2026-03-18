@@ -88,6 +88,9 @@ function parseSimpleChapters(
   return chapters;
 }
 
+/** Fallback end time when video duration is unknown (seconds). */
+const DEFAULT_LAST_CHAPTER_END = 7200;
+
 /** Fill in end times for chapters based on the next chapter's start */
 function setChapterEnds(chapters: Chapter[], videoDuration?: number) {
   for (let i = 0; i < chapters.length - 1; i++) {
@@ -95,6 +98,6 @@ function setChapterEnds(chapters: Chapter[], videoDuration?: number) {
   }
   if (chapters.length > 0) {
     chapters[chapters.length - 1].end =
-      videoDuration || chapters[chapters.length - 1].start + 7200;
+      videoDuration || chapters[chapters.length - 1].start + DEFAULT_LAST_CHAPTER_END;
   }
 }

@@ -89,6 +89,8 @@ export async function getFFmpeg(
     );
   }
 
+  // NOTE: Loading from unpkg CDN. For production deployments consider
+  // self-hosting ffmpeg-core files to reduce supply-chain risk.
   const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
   await ffInstance.load({
     coreURL: await toBlobURL(
