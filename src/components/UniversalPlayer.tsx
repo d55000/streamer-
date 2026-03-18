@@ -210,12 +210,12 @@ export default function UniversalPlayer({
         });
 
         hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal && !usingProxy && src) {
-            hls.destroy();
-            hlsRef.current = null;
-            setUsingProxy(true);
-          } else if (data.fatal) {
-            setError("Failed to load HLS stream");
+          if (data.fatal) {
+            if (!usingProxy && src) {
+              setUsingProxy(true); // triggers re-render; cleanup destroys old hls
+            } else {
+              setError("Failed to load HLS stream");
+            }
           }
         });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
@@ -243,9 +243,7 @@ export default function UniversalPlayer({
 
         player.on("error", () => {
           if (!usingProxy && src) {
-            player.reset();
-            dashRef.current = null;
-            setUsingProxy(true);
+            setUsingProxy(true); // triggers re-render; cleanup resets old dash player
           } else {
             setError("Failed to load DASH stream");
           }

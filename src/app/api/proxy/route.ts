@@ -6,6 +6,22 @@ import { NextRequest, NextResponse } from "next/server";
  * enabling playback of videos from servers that don't set CORS or CORP headers.
  * Supports HTTP Range requests for seeking.
  */
+
+/** Block requests to private / loopback IP ranges (SSRF protection). */
+function isPrivateHost(hostname: string): boolean {
+  // Loopback
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") return true;
+  // Private IPv4 ranges
+  if (/^10\./.test(hostname)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+  if (/^192\.168\./.test(hostname)) return true;
+  // Link-local
+  if (/^169\.254\./.test(hostname)) return true;
+  // 0.0.0.0
+  if (hostname === "0.0.0.0") return true;
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   const targetUrl = request.nextUrl.searchParams.get("url");
 
@@ -26,12 +42,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Only HTTP(S) URLs are allowed" }, { status: 400 });
   }
 
+  // Block private / internal addresses to prevent SSRF
+  if (isPrivateHost(parsed.hostname)) {
+    return NextResponse.json({ error: "Requests to private addresses are not allowed" }, { status: 403 });
+  }
+
   // Build headers to forward to the remote server
   const forwardHeaders: HeadersInit = {};
   const range = request.headers.get("range");
   if (range) {
     forwardHeaders["Range"] = range;
   }
+
+  // Derive the caller's origin for the CORS response header
+  const origin = request.headers.get("origin") || request.nextUrl.origin;
 
   try {
     const upstream = await fetch(targetUrl, {
@@ -62,7 +86,7 @@ export async function GET(request: NextRequest) {
     if (acceptRanges) headers.set("Accept-Ranges", acceptRanges);
 
     // CORS / CORP headers so the browser allows the resource
-    headers.set("Access-Control-Allow-Origin", "*");
+    headers.set("Access-Control-Allow-Origin", origin);
     headers.set("Cross-Origin-Resource-Policy", "cross-origin");
 
     return new Response(upstream.body, {
