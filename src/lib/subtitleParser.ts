@@ -29,10 +29,14 @@ export function parseSRT(content: string): SubtitleCue[] {
     const [startStr, endStr] = lines[timingIdx].split(" --> ");
     const start = timeToSeconds(startStr.trim());
     const end = timeToSeconds(endStr.trim());
-    const text = lines
-      .slice(timingIdx + 1)
-      .join("\n")
-      .replace(/<[^>]+>/g, ""); // Strip HTML tags
+    let text = lines.slice(timingIdx + 1).join("\n");
+    // Iteratively strip HTML tags to handle nested/obfuscated tags like <scr<script>ipt>
+    let prev = "";
+    while (prev !== text) {
+      prev = text;
+      text = text.replace(/<[^>]*>/g, "");
+    }
+    text = text.trim();
 
     if (!isNaN(start) && !isNaN(end) && text) {
       cues.push({ start, end, text });
