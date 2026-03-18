@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   Play,
   Link as LinkIcon,
@@ -57,6 +57,14 @@ export default function Home() {
   const [fileName, setFileName] = useState("");
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* Revoke object URL on unmount to prevent memory leaks */
+  useEffect(() => {
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Handle URL submit */
   const handleUrlSubmit = (e: React.FormEvent) => {

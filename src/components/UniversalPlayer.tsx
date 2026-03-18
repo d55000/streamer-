@@ -303,7 +303,9 @@ export default function UniversalPlayer({
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
-      video.play().catch(() => {});
+      video.play().catch((err) => {
+        console.warn("Playback failed:", err.message);
+      });
     } else {
       video.pause();
     }
@@ -338,10 +340,14 @@ export default function UniversalPlayer({
     const el = containerRef.current;
     if (!el) return;
     if (!document.fullscreenElement) {
-      await el.requestFullscreen().catch(() => {});
+      await el.requestFullscreen().catch((err) => {
+        console.warn("Fullscreen request failed:", err.message);
+      });
       setFullscreen(true);
     } else {
-      await document.exitFullscreen().catch(() => {});
+      await document.exitFullscreen().catch((err) => {
+        console.warn("Exit fullscreen failed:", err.message);
+      });
       setFullscreen(false);
     }
   };
@@ -396,6 +402,8 @@ export default function UniversalPlayer({
         e.target instanceof HTMLTextAreaElement
       )
         return;
+      // Skip if modifier keys are held to avoid conflicts with browser shortcuts
+      if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
       const video = videoRef.current;
       if (!video) return;
       switch (e.key) {
@@ -710,7 +718,7 @@ export default function UniversalPlayer({
       onMouseLeave={() => {
         if (playing) setControlsVisible(false);
       }}
-      onClick={(e) => {
+      onClick={() => {
         // Close settings if clicking outside
         if (settingsOpen) {
           setSettingsOpen(false);
