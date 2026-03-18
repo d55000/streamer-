@@ -54,6 +54,7 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [activeUrl, setActiveUrl] = useState("");
   const [objectUrl, setObjectUrl] = useState("");
+  const [localFile, setLocalFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +77,7 @@ export default function Home() {
       setObjectUrl("");
     }
     setFileName("");
+    setLocalFile(null);
     setActiveUrl(url.trim());
   };
 
@@ -85,6 +87,7 @@ export default function Home() {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       const blobUrl = URL.createObjectURL(file);
       setObjectUrl(blobUrl);
+      setLocalFile(file);
       setFileName(file.name);
       setActiveUrl("");
       setUrl("");
@@ -126,8 +129,8 @@ export default function Home() {
             , anywhere
           </h1>
           <p className="mt-3 text-white/40 text-base sm:text-lg max-w-xl mx-auto">
-            MP4 · WebM · HLS · DASH · MKV — paste a streaming link or drop a
-            local file
+            MP4 · MKV · WebM · HLS · DASH · HEVC · 10-bit · AVI — paste a
+            streaming link or drop a local file
           </p>
         </div>
 
@@ -171,7 +174,7 @@ export default function Home() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="video/*,.mkv,.mp4,.webm,.avi,.mov"
+              accept="video/*,.mkv,.mp4,.webm,.avi,.mov,.flv,.wmv,.ts,.m2ts,.ogv,.rmvb"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -189,7 +192,7 @@ export default function Home() {
                   <span className="text-[#A855F7]">browse</span>
                 </p>
                 <p className="text-xs text-white/30 mt-0.5">
-                  Supports MP4, WebM, MKV, AVI, MOV
+                  Supports MP4, WebM, MKV, AVI, MOV, FLV, HEVC, 10-bit
                 </p>
               </div>
             </div>
@@ -209,13 +212,13 @@ export default function Home() {
           {/* Cinematic backglow */}
           <div className="absolute -inset-6 rounded-3xl bg-[#8B5CF6]/8 blur-3xl -z-10 pointer-events-none" />
           <div className="rounded-2xl border border-white/5 overflow-hidden shadow-2xl glow-violet-lg">
-            <UniversalPlayer src={activeUrl} objectUrl={objectUrl} />
+            <UniversalPlayer src={activeUrl} objectUrl={objectUrl} localFile={localFile} />
           </div>
         </div>
 
         {/* Format support badges */}
         <div className="flex flex-wrap justify-center gap-2 mt-8">
-          {["MP4", "WebM", "HLS", "DASH", "MKV"].map((fmt) => (
+          {["MP4", "WebM", "HLS", "DASH", "MKV", "AVI", "HEVC", "10-bit", "DTS", "AC3"].map((fmt) => (
             <span
               key={fmt}
               className="rounded-full bg-[#16161E] border border-white/5 px-3 py-1 text-xs text-white/40 font-mono"
