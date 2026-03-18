@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: starter
     buildCommand: npm install && npm run build
-    startCommand: npm run start -- -p $PORT
+    startCommand: node .next/standalone/server.js
     envVars:
       - key: NODE_ENV
         value: production
